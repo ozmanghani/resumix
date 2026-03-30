@@ -1,0 +1,15 @@
+src/
+tests/
+coverage/
+.claude/
+.env
+.eslintrc.json
+.prettierrc
+jest.config.js
+tsconfig*.json
+test-cli.ts
+test-server.ts
+*.pdf
+*.tgz
+.DS_Store
+*.log
