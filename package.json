@@ -1,6 +1,6 @@
 {
   "name": "resumix",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Advanced PDF resume parser that extracts structured JSON data with schema-driven field selection and optional AI support",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
@@ -44,6 +44,14 @@
     "openai",
     "typescript"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ozmanghani/resumix.git"
+  },
+  "homepage": "https://github.com/ozmanghani/resumix#readme",
+  "bugs": {
+    "url": "https://github.com/ozmanghani/resumix/issues"
+  },
   "author": "Osman Ahmadzai",
   "license": "MIT",
   "devDependencies": {
