@@ -295,7 +295,7 @@ class MyCustomAIProvider implements CustomAIProvider {
   async extract(text: string, fields?: string[]): Promise<Record<string, unknown>> {
     // Implement your custom AI logic here
     // Call your own API, use a different LLM, etc.
-    
+
     return {
       contact: {
         name: 'John Doe',
@@ -471,9 +471,9 @@ The `ParseResult` includes both extracted data and metadata:
 
 ```typescript
 interface ParseResult {
-  data: ResumeData;        // Extracted resume data
+  data: ResumeData; // Extracted resume data
   metadata: ParseMetadata; // Parsing metadata
-  rawText?: string;        // Optional raw PDF text
+  rawText?: string; // Optional raw PDF text
 }
 
 interface ResumeData {
@@ -492,11 +492,11 @@ interface ResumeData {
 }
 
 interface ParseMetadata {
-  pages: number;                      // Total pages in PDF
-  duration: number;                   // Parsing duration in ms
-  mode: 'rule-based' | 'ai';         // Parsing mode used
-  sectionsDetected: string[];         // Detected sections
-  confidence?: number;                // AI confidence (0-1) if using AI
+  pages: number; // Total pages in PDF
+  duration: number; // Parsing duration in ms
+  mode: 'rule-based' | 'ai'; // Parsing mode used
+  sectionsDetected: string[]; // Detected sections
+  confidence?: number; // AI confidence (0-1) if using AI
 }
 ```
 
