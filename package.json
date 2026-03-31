@@ -1,6 +1,6 @@
 {
   "name": "resumix",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Advanced PDF resume parser that extracts structured JSON data with schema-driven field selection and optional AI support",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",

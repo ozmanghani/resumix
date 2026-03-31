@@ -49,6 +49,7 @@ export type {
   VolunteerExperience,
   ParseResult,
   ParseMetadata,
+  SectionCompleteness,
 } from './types/resume';
 
 export type {

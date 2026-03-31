@@ -108,6 +108,20 @@ export interface ResumeData {
 }
 
 /**
+ * Completeness metrics for a specific section.
+ */
+export interface SectionCompleteness {
+  /** The section name (e.g., 'contact', 'experience') */
+  section: string;
+  /** Number of expected core fields */
+  fieldsExpected: number;
+  /** Number of core fields that were populated */
+  fieldsPopulated: number;
+  /** Completeness percentage (0-100) */
+  percentage: number;
+}
+
+/**
  * Metadata about the parsing operation.
  */
 export interface ParseMetadata {
@@ -119,8 +133,14 @@ export interface ParseMetadata {
   mode: 'rule-based' | 'ai';
   /** Sections detected in the resume */
   sectionsDetected: string[];
-  /** Confidence score (0-1) when using AI */
-  confidence?: number;
+  /** Confidence score (0-1) based on extraction quality */
+  confidence: number;
+  /** Detected PDF layout type */
+  layout: 'single-column' | 'two-column' | 'unknown';
+  /** Warnings about missing or incomplete data */
+  warnings: string[];
+  /** Per-section completeness metrics */
+  completeness: SectionCompleteness[];
 }
 
 /**

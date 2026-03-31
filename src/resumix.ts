@@ -4,6 +4,7 @@ import { detectSections, Section } from './core/section-detector';
 import { resolveSchema, getIncludedSections } from './schema/schema-engine';
 import { filterBySchema } from './schema/field-filter';
 import { createAIProvider, extractWithAI } from './ai/ai-extractor';
+import { calculateConfidence, generateWarnings, calculateCompleteness } from './utils/confidence-calculator';
 import { NormalizedSchema } from './types/schema';
 import { ParseOptions } from './types/options';
 import { ResumeData, ParseResult, ParseMetadata } from './types/resume';
@@ -69,8 +70,8 @@ export class Resumix {
     const mergedOptions: ParseOptions = { ...this.defaultOptions, ...options };
     const startTime = Date.now();
 
-    // Step 1: Read PDF
-    const { text: rawText, pages } = await readPdf(input);
+    // Step 1: Read PDF (with column-aware extraction)
+    const { text: rawText, pages, layout } = await readPdf(input);
 
     // Step 2: Preprocess text
     const cleanedText = preprocessText(rawText);
@@ -87,7 +88,6 @@ export class Resumix {
     let data: ResumeData;
     let mode: 'rule-based' | 'ai';
     let sectionsDetected: string[] = [];
-    let confidence: number | undefined;
 
     if (aiProvider) {
       // AI-powered extraction
@@ -95,7 +95,11 @@ export class Resumix {
       const includedSections = getIncludedSections(schema);
       const rawData = await extractWithAI(aiProvider, cleanedText, includedSections ?? undefined);
       data = rawData as ResumeData;
-      confidence = 0.85; // Default AI confidence
+
+      // Derive sections from what the AI returned
+      sectionsDetected = Object.keys(data).filter(
+        (key) => data[key as keyof ResumeData] !== undefined && data[key as keyof ResumeData] !== null
+      );
     } else {
       // Rule-based extraction
       mode = 'rule-based';
@@ -111,14 +115,22 @@ export class Resumix {
     // Step 7: Filter by schema
     const filteredData = filterBySchema(data, schema);
 
-    // Step 8: Build result
+    // Step 8: Calculate quality metrics
+    const confidence = calculateConfidence(filteredData, sectionsDetected, mode);
+    const warnings = generateWarnings(filteredData, sectionsDetected);
+    const completeness = calculateCompleteness(filteredData);
+
+    // Step 9: Build result
     const duration = Date.now() - startTime;
     const metadata: ParseMetadata = {
       pages,
       duration,
       mode,
       sectionsDetected,
-      ...(confidence !== undefined ? { confidence } : {}),
+      confidence,
+      layout,
+      warnings,
+      completeness,
     };
 
     const result: ParseResult = {

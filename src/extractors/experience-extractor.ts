@@ -1,6 +1,7 @@
 /**
  * Extractor for work experience from resume.
  * Identifies job titles, companies, dates, locations, and accomplishments.
+ * Handles dateless entries and ambiguous date formats.
  */
 
 import { Experience } from '../types/resume';
@@ -26,6 +27,17 @@ const CURRENT_PATTERN = /present|current|now/i;
  * Pattern for detecting year ranges in text (e.g., "2024 – Present", "2020 - 2022")
  */
 const YEAR_RANGE_PATTERN = /(\d{4})\s*(?:–|-|to)\s*(present|current|now|\d{4})/i;
+
+/**
+ * Pattern for matching "Month Year" standalone dates.
+ */
+const MONTH_YEAR_PATTERN = /\b(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\s+\d{4}\b/i;
+
+/**
+ * Pattern for "Title at Company" or "Title - Company" format.
+ */
+const TITLE_COMPANY_DASH = /^.+\s*[—–-]\s*.+$/;
+const TITLE_COMPANY_AT = /^.+\s+at\s+.+$/i;
 
 /**
  * ExperienceExtractor extracts work experience entries from resume.
@@ -68,8 +80,11 @@ export class ExperienceExtractor extends BaseExtractor<Experience[]> {
 
   /**
    * Split lines into experience entry blocks.
-   * Detects new job entries by looking for lines containing date patterns.
-   * A new block starts when a non-bullet line is followed by or contains a date range.
+   * Detects new job entries by looking for:
+   * - Lines containing date patterns
+   * - Blank lines separating entries
+   * - Job header patterns (Title - Company, Title at Company)
+   * - Short non-bullet lines after bullet points
    *
    * @param lines - Lines from experience section
    * @returns Array of line blocks
@@ -91,24 +106,28 @@ export class ExperienceExtractor extends BaseExtractor<Experience[]> {
       }
 
       const isBullet = BULLET_PATTERN.test(trimmed);
-      const isDateLine = this.looksLikeDate(trimmed);
 
-      // If we already have a block and encounter a non-bullet, non-date line
-      // that looks like a job title (contains dashes for title—company format or just looks like a title),
-      // and we already have content with some bullets or dates, start a new block
-      if (
-        currentBlock.length > 0 &&
-        !isBullet &&
-        !isDateLine &&
-        (currentBlock.some((line) => BULLET_PATTERN.test(line)) || currentBlock.some((line) => this.looksLikeDate(line)))
-      ) {
-        // This looks like a new job entry - start a new block
-        blocks.push(currentBlock);
-        currentBlock = [trimmed];
-      } else {
-        // Add to current block
-        currentBlock.push(trimmed);
+      // If we already have a block with content, check if this line starts a new entry
+      if (currentBlock.length > 0 && !isBullet) {
+        const hasBulletsOrDates =
+          currentBlock.some((line) => BULLET_PATTERN.test(line)) ||
+          currentBlock.some((line) => this.looksLikeDate(line));
+        const hasContent = currentBlock.length >= 2;
+
+        // Start a new block if current block has meaningful content
+        // and this line looks like a new job entry header
+        if (
+          (hasBulletsOrDates || hasContent) &&
+          this.looksLikeJobHeader(trimmed)
+        ) {
+          blocks.push(currentBlock);
+          currentBlock = [trimmed];
+          continue;
+        }
       }
+
+      // Add to current block
+      currentBlock.push(trimmed);
     }
 
     if (currentBlock.length > 0) {
@@ -116,6 +135,39 @@ export class ExperienceExtractor extends BaseExtractor<Experience[]> {
     }
 
     return blocks;
+  }
+
+  /**
+   * Check if a line looks like a job entry header.
+   * Matches patterns like:
+   * - "Title - Company"
+   * - "Title at Company"
+   * - Short title-case lines (likely job titles)
+   * - Lines with date patterns
+   */
+  private looksLikeJobHeader(line: string): boolean {
+    // Skip bullet points
+    if (BULLET_PATTERN.test(line)) return false;
+
+    // Contains a date range
+    if (this.looksLikeDate(line)) return true;
+
+    // "Title - Company" or "Title at Company" format
+    if (TITLE_COMPANY_DASH.test(line) && line.length < 80) return true;
+    if (TITLE_COMPANY_AT.test(line)) return true;
+
+    // Short line that is NOT a continuation sentence
+    // (starts with uppercase, doesn't start with lowercase connectors)
+    if (
+      line.length < 60 &&
+      /^[A-Z]/.test(line) &&
+      !/^(?:and|or|but|the|a|an|in|at|to|for|of|with)\s/i.test(line) &&
+      !line.endsWith(',')
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -177,7 +229,10 @@ export class ExperienceExtractor extends BaseExtractor<Experience[]> {
 
   /**
    * Extract and parse full date range from text.
-   * Extracts ranges like "2024 – Present", "January 2020 - December 2022"
+   * Handles various formats including:
+   * - "2024 – Present", "January 2020 - December 2022"
+   * - Standalone years: "2023"
+   * - Month/Year without range: "Jan 2023"
    *
    * @param text - Text containing dates
    * @returns Object with start, end, and isCurrent flag or undefined
@@ -220,6 +275,26 @@ export class ExperienceExtractor extends BaseExtractor<Experience[]> {
           isCurrent: false,
         };
       }
+    }
+
+    // Try to match a standalone "Month Year" date
+    const monthYearMatch = text.match(MONTH_YEAR_PATTERN);
+    if (monthYearMatch) {
+      return {
+        start: monthYearMatch[0],
+        end: '',
+        isCurrent: false,
+      };
+    }
+
+    // Fallback: try to find a standalone year
+    const singleYearMatch = text.match(/\b(20\d{2}|19\d{2})\b/);
+    if (singleYearMatch) {
+      return {
+        start: singleYearMatch[1],
+        end: '',
+        isCurrent: false,
+      };
     }
 
     return undefined;

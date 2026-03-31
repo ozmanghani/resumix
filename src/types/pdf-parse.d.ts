@@ -1,4 +1,28 @@
 declare module 'pdf-parse' {
+  interface PdfTextItem {
+    str: string;
+    transform: number[];
+    width: number;
+    height: number;
+  }
+
+  interface PdfTextContent {
+    items: PdfTextItem[];
+  }
+
+  interface PdfPageData {
+    getTextContent(options?: {
+      normalizeWhitespace?: boolean;
+      disableCombineTextItems?: boolean;
+    }): Promise<PdfTextContent>;
+  }
+
+  interface PdfParseOptions {
+    pagerender?: (pageData: PdfPageData) => Promise<string>;
+    max?: number;
+    version?: string;
+  }
+
   interface PdfParseResult {
     numpages: number;
     numrender: number;
@@ -8,10 +32,7 @@ declare module 'pdf-parse' {
     text: string;
   }
 
-  function pdfParse(
-    dataBuffer: Buffer,
-    options?: Record<string, unknown>,
-  ): Promise<PdfParseResult>;
+  function pdfParse(dataBuffer: Buffer, options?: PdfParseOptions): Promise<PdfParseResult>;
 
   export = pdfParse;
 }
